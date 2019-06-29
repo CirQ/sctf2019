@@ -9,66 +9,6 @@ from FLAG import flag
 from MESSAGE import message
 
 
-class telecom:
-    def __init__(self, name):
-        self.name = name
-        self.key = get_random_bytes(16)
-        self.iv = get_random_bytes(16)
-
-        self.e = 3
-
-        p = getPrime(512)
-        q = getPrime(512)
-        self.fn = (p-1)*(q-1)
-
-        while True:
-            if GCD(self.e, self.fn) != 1:
-                p = getPrime(512)
-                q = getPrime(512)
-                self.fn = (p - 1) * (q - 1)
-            else:
-                break
-
-        self.d = inverse(self.e, self.fn)
-        self.n = p * q
-
-    def RSA_encrypt(self, plaintext):
-        assert bytes_to_long(plaintext).bit_length() < 512
-
-        a = getPrime(512)
-        b = getPrime(512)
-        m = bytes_to_long(plaintext)
-        c = pow(a * m + b, self.e, self.n)
-
-
-        message = 'admin:'+self.name+', your ciphertext is: c='+hex(c)+'\nwith some parameters:a='+hex(a)+', b='+hex(b)+'\n'
-        return message
-
-    def RSA_decrypt(self):
-        pass
-
-    def broadcast(self):
-        message = self.name+':'+'my pub-key is: '+'e='+str(self.e)+','+'n='+hex(self.n)+'\n'
-        return message
-
-    def pad(self, msg):
-        pad_length = 16 - len(msg) % 16
-        return msg + chr(pad_length) * pad_length
-
-    def unpad(self, msg):
-        return msg[:-ord(msg[-1])]
-
-    def AES_encrypt(self, message):
-        message = self.pad(message)
-        aes = AES.new(self.key, AES.MODE_OFB, self.iv)
-        return aes.encrypt(message)
-
-
-    def AES_decrypt(self, message):
-        aes = AES.new(self.key, AES.MODE_OFB, self.iv)
-        return self.unpad(aes.decrypt(message))
-
-
 def proof_of_work():
     p = getPrime(512)
     q = getPrime(512)
@@ -88,8 +28,55 @@ def proof_of_work():
     return True
 
 
-if __name__ == '__main__':
+class telecom:
+    def __init__(self, name):
+        self.name = name
+        self.key = get_random_bytes(16)
+        self.iv = get_random_bytes(16)
 
+        self.e = 3
+        while True:
+            p = getPrime(512)
+            q = getPrime(512)
+            self.fn = (p - 1) * (q - 1)
+            if GCD(self.e, self.fn) == 1:
+                break
+        self.d = inverse(self.e, self.fn)
+        self.n = p * q
+
+    def RSA_encrypt(self, plaintext):
+        assert bytes_to_long(plaintext).bit_length() < 512
+        a = getPrime(512)
+        b = getPrime(512)
+        m = bytes_to_long(plaintext)
+        c = pow(a * m + b, self.e, self.n)
+        return 'admin:'+self.name+', your ciphertext is: c='+hex(c)+'\nwith some parameters:a='+hex(a)+', b='+hex(b)+'\n'
+
+    def RSA_decrypt(self):
+        pass
+
+    def broadcast(self):
+        return self.name+':'+'my pub-key is: '+'e='+str(self.e)+','+'n='+hex(self.n)+'\n'
+
+    def pad(self, msg):
+        pad_length = 16 - len(msg) % 16
+        return msg + chr(pad_length) * pad_length
+
+    def unpad(self, msg):
+        return msg[:-ord(msg[-1])]
+
+    def AES_encrypt(self, message):
+        message = self.pad(message)
+        aes = AES.new(self.key, AES.MODE_OFB, self.iv)
+        return aes.encrypt(message)
+
+    def AES_decrypt(self, message):
+        aes = AES.new(self.key, AES.MODE_OFB, self.iv)
+        return self.unpad(aes.decrypt(message))
+
+
+
+if __name__ == '__main__':
     if not proof_of_work():
         exit()
 
@@ -98,7 +85,6 @@ if __name__ == '__main__':
         choice = raw_input()
 
         if int(choice) == 1:
-
             Alpha = telecom('Alpha')
             Bravo = telecom('Bravo')
             Charlie = telecom('Charlie')
@@ -111,14 +97,12 @@ if __name__ == '__main__':
             print Bravo.RSA_encrypt(message)
             print Charlie.RSA_encrypt(message)
             print 'Alpha:David, make sure you\'ve read this:' + hexlify(Alpha.AES_encrypt(message))+'\n'
-        elif int(choice) == 2:
-            print 'you can send message to David now:'
-            input_cipher = raw_input()
-            if Alpha.AES_decrypt(unhexlify(input_cipher)) == message.replace('afternoon', 'morning'):
-                print 'you made it, this reward is prepared for you:' + flag
-                exit()
-            else:
-                print 'you failed'
-                exit()
         else:
+            if int(choice) == 2:
+                print 'you can send message to David now:'
+                input_cipher = raw_input()
+                if Alpha.AES_decrypt(unhexlify(input_cipher)) == message.replace('afternoon', 'morning'):
+                    print 'you made it, this reward is prepared for you:' + flag
+                else:
+                    print 'you failed'
             exit()
