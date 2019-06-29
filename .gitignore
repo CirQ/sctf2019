@@ -3,3 +3,4 @@
 *.sage.py
 .vscode
 .idea
+out
